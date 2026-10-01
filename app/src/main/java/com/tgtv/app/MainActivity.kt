@@ -113,8 +113,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun start(url: String, drm: JSONObject?) {
+        val token = Regex("__hdnea__=([^&]+)").find(url)?.groupValues?.get(1)
+        val hdrs = HashMap<String, String>()
+        if (token != null) hdrs["Cookie"] = "__hdnea__=$token"
         val http = DefaultHttpDataSource.Factory()
-            .setUserAgent(UA).setAllowCrossProtocolRedirects(true)
+            .setUserAgent("plaYtv/7.1.5 (Linux;Android 13) ExoPlayerLib/2.11.7")
+            .setDefaultRequestProperties(hdrs)
+            .setAllowCrossProtocolRedirects(true)
             .setConnectTimeoutMs(15000).setReadTimeoutMs(15000)
         val factory = DashMediaSource.Factory(http)
         if (drm != null && drm.has("keyId")) {
@@ -138,7 +143,10 @@ class MainActivity : AppCompatActivity() {
             }
             override fun onPlayerError(e: PlaybackException) {
                 if (retries++ < 3) play(current)
-                else { spinner.visibility = View.GONE; Toast.makeText(this@MainActivity, "Playback error: ${e.errorCodeName}", Toast.LENGTH_LONG).show() }
+                else { spinner.visibility = View.GONE; 
+                    val c = e.cause
+                    val extra = if (c is androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException) " HTTP ${c.responseCode}\n${c.dataSpec.uri.path}" else ""
+                    Toast.makeText(this@MainActivity, "Playback error: ${e.errorCodeName}$extra", Toast.LENGTH_LONG).show() }
             }
         })
         pv.player = p; player = p; p.prepare()
@@ -200,3 +208,5 @@ class MainActivity : AppCompatActivity() {
         }
     }
 }
+
+
